@@ -195,13 +195,59 @@ Aplikasi **StudyBuddy** dinyatakan selesai dan sukses dikembangkan jika memenuhi
 
 Proyek ini menggunakan struktur *TypeScript Monorepo* berbasis `npm workspaces`:
 
-```text
+```
 studybuddy/
-  apps/
-    web/          # Aplikasi Frontend (React + Vite + Tailwind)
-    api/          # Aplikasi Backend (Express + Prisma)
-  packages/
-    shared/       # Paket Tipe & Model Bersama (@studybuddy/shared)
+├── .env.example                # Template variabel lingkungan
+├── .gitignore                  # File/folder yang diabaikan oleh Git
+├── docker-compose.yml          # Konfigurasi container PostgreSQL/MySQL
+├── package.json                # Root package.json (npm workspaces config)
+├── tsconfig.json               # Konfigurasi TypeScript root
+├── README.md                   # Dokumen spesifikasi dan instruksi proyek
+│
+├── apps/
+│   ├── web/                    # Aplikasi Frontend (React + Vite + Tailwind CSS)
+│   │   ├── public/
+│   │   ├── src/
+│   │   │   ├── assets/         # Asset gambar dan ikon
+│   │   │   ├── components/     # Komponen UI (Navbar, SessionCard, StatusBadge, Modal)
+│   │   │   ├── pages/          # Halaman utama (LoginPage, RegisterPage, DashboardPage, ExplorePage, SessionDetailPage)
+│   │   │   ├── services/       # Service panggilan API Axios
+│   │   │   ├── context/        # React Context untuk Autentikasi/State
+│   │   │   ├── App.tsx         # Komponen Root & React Router
+│   │   │   ├── main.tsx        # Entry point React
+│   │   │   └── index.css       # Tailwind CSS import
+│   │   ├── index.html
+│   │   ├── package.json
+│   │   ├── tailwind.config.js
+│   │   ├── tsconfig.json
+│   │   └── vite.config.ts
+│   │
+│   └── api/                    # Aplikasi Backend (Node.js + Express + Prisma)
+│       ├── prisma/
+│       │   ├── schema.prisma   # Definisikan skema database Prisma
+│       │   ├── migrations/     # Riwayat migrasi database
+│       │   └── seed.ts         # Skrip seed data awal
+│       ├── src/
+│       │   ├── config/         # Konfigurasi environment & database Client
+│       │   ├── controllers/    # Handler logika endpoint (Auth, User, Session, Message)
+│       │   ├── middlewares/    # Middleware auth JWT & error handler
+│       │   ├── routes/         # Definisi router Express API
+│       │   ├── services/       # Logika bisnis & query Prisma
+│       │   ├── socket/         # Handler event real-time Socket.io
+│       │   └── index.ts        # Entry point server Express
+│       ├── package.json
+│       └── tsconfig.json
+│
+└── packages/
+    └── shared/                 # Paket Shared TypeScript (@studybuddy/shared)
+        ├── src/
+        │   ├── models/         # Definisi tipe User, StudySession, SessionParticipant, ChatMessage
+        │   ├── enums/          # Status Enum (misal: CapacityStatus)
+        │   ├── dto/            # Data Transfer Objects untuk Request/Response API
+        │   └── index.ts        # Export terpusat untuk semua tipe
+        ├── package.json
+        └── tsconfig.json
+
 ```
 
 ### Aturan Paket Shared (`@studybuddy/shared`)
