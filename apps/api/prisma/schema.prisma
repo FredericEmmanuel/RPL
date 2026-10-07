@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String              @id @default(cuid())
+  name              String
+  email             String              @unique
+  passwordHash      String
+  schoolOrUniversity String?
+  favoriteSubjects  String[]            @default([])
+  preferredLocation String?
+  createdAt         DateTime            @default(now())
+  createdSessions   StudySession[]      @relation("SessionCreator")
+  participations    SessionParticipant[]
+  messages          ChatMessage[]
+}
+
+model StudySession {
+  id           String              @id @default(cuid())
+  creatorId    String
+  title        String
+  subject      String
+  startTime    DateTime
+  location     String
+  capacity     Int
+  createdAt    DateTime            @default(now())
+  creator      User                @relation("SessionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  participants SessionParticipant[]
+  messages     ChatMessage[]
+
+  @@index([subject])
+  @@index([startTime])
+}
+
+model SessionParticipant {
+  id        String       @id @default(cuid())
+  sessionId String
+  userId    String
+  joinedAt  DateTime     @default(now())
+  session   StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String       @id @default(cuid())
+  sessionId String
+  senderId  String
+  message   String
+  sentAt    DateTime     @default(now())
+  session   StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender    User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, sentAt])
+}

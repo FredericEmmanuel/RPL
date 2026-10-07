@@ -1,0 +1,23 @@
+{
+  "name": "studybuddy",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build --workspace @studybuddy/shared",
+    "build": "npm run build --workspace @studybuddy/api && npm run build --workspace @studybuddy/web",
+    "dev": "concurrently -k \"npm run dev --workspace @studybuddy/api\" \"npm run dev --workspace @studybuddy/web\"",
+    "db:migrate": "npm run prisma:migrate --workspace @studybuddy/api",
+    "db:seed": "npm run prisma:seed --workspace @studybuddy/api",
+    "db:studio": "npm run prisma:studio --workspace @studybuddy/api"
+  },
+  "overrides": {
+    "shell-quote": "1.12.0"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.4"
+  }
+}
