@@ -1,39 +1,39 @@
 # StudyBuddy - Platform Web Komunitas Belajar Lokal
 
-**StudyBuddy** adalah platform web responsif berbasis komunitas lokal yang dirancang untuk membantu pelajar dan mahasiswa menemukan teman belajar atau membentuk grup belajar berdasarkan mata pelajaran/mata kuliah, ketersediaan waktu, dan lokasi yang berdekatan[cite: 1]. Antarmuka dan seluruh pesan aplikasi menggunakan Bahasa Indonesia.
+**StudyBuddy** adalah platform web responsif berbasis komunitas lokal yang dirancang untuk membantu pelajar dan mahasiswa menemukan teman belajar atau membentuk grup belajar berdasarkan mata pelajaran/mata kuliah, ketersediaan waktu, dan lokasi yang berdekatan. Antarmuka dan seluruh pesan aplikasi menggunakan Bahasa Indonesia.
 
 ---
 
 ## Tema & Gambaran Umum
 
-> **"Platform Web Responsif Berbasis Komunitas Lokal untuk Pencarian Teman Belajar dan Pembentukan Grup Belajar Spesifik Mata Pelajaran/Mata Kuliah"**[cite: 1]
+> **"Platform Web Responsif Berbasis Komunitas Lokal untuk Pencarian Teman Belajar dan Pembentukan Grup Belajar Spesifik Mata Pelajaran/Mata Kuliah"**
 
-Projek ini dikembangkan sebagai solusi praktis atas permasalahan koordinasi belajar kelompok yang tidak terarah[cite: 1]. Aplikasi ini difokuskan pada fitur-fitur inti (*core features*) yang realistis untuk diselesaikan dalam durasi **12 pertemuan pengembangan**[cite: 1].
+Projek ini dikembangkan sebagai solusi praktis atas permasalahan koordinasi belajar kelompok yang tidak terarah. Aplikasi ini difokuskan pada fitur-fitur inti (*core features*) yang realistis untuk diselesaikan dalam durasi **12 pertemuan pengembangan**.
 
 ---
 
 ## Deskripsi Masalah
 
-* **Masalah Utama:** Banyak pelajar dan mahasiswa kesulitan menemukan teman belajar kelompok yang memiliki kebutuhan mata pelajaran/mata kuliah yang sama, kecocokan waktu, serta lokasi belajar yang berdekatan[cite: 1].
-* **Dampak:** Proses belajar mandiri sering kali stagnan karena kurangnya diskusi/pemahaman materi, sementara koordinasi pembentukan kelompok belajar secara manual (melalui grup *chat* umum) sering kali tidak terarah dan tidak efektif[cite: 1].
+* **Masalah Utama:** Banyak pelajar dan mahasiswa kesulitan menemukan teman belajar kelompok yang memiliki kebutuhan mata pelajaran/mata kuliah yang sama, kecocokan waktu, serta lokasi belajar yang berdekatan.
+* **Dampak:** Proses belajar mandiri sering kali stagnan karena kurangnya diskusi/pemahaman materi, sementara koordinasi pembentukan kelompok belajar secara manual (melalui grup *chat* umum) sering kali tidak terarah dan tidak efektif.
 
 ---
 
 ## Profil Target Pengguna
 
-* **Pengguna Utama:** Siswa & Mahasiswa[cite: 1].
+* **Pengguna Utama:** Siswa & Mahasiswa.
 * **Kebutuhan:** 
-  * Mencari pendorong semangat belajar (*study buddy*)[cite: 1].
-  * Memahami materi yang sulit melalui diskusi *peer-to-peer*[cite: 1].
-  * Menemukan tempat dan jadwal belajar yang fleksibel[cite: 1].
-* **Karakteristik:** Terbiasa menggunakan aplikasi dengan antarmuka *mobile-friendly* dan *web-responsive*[cite: 1].
+  * Mencari pendorong semangat belajar (*study buddy*).
+  * Memahami materi yang sulit melalui diskusi *peer-to-peer*.
+  * Menemukan tempat dan jadwal belajar yang fleksibel.
+* **Karakteristik:** Terbiasa menggunakan aplikasi dengan antarmuka *mobile-friendly* dan *web-responsive*.
 
 ---
 
 ## Manfaat Aplikasi
 
-1. **Bagi Pengguna:** Memudahkan penemuan teman/grup belajar secara efisien berdasarkan lokasi, waktu, dan mata pelajaran yang sama tanpa perlu melakukan pengumuman manual di media sosial[cite: 1].
-2. **Bagi Proses Belajar:** Meningkatkan kolaborasi dan produktivitas belajar kelompok melalui wadah koordinasi yang terpusat[cite: 1].
+1. **Bagi Pengguna:** Memudahkan penemuan teman/grup belajar secara efisien berdasarkan lokasi, waktu, dan mata pelajaran yang sama tanpa perlu melakukan pengumuman manual di media sosial.
+2. **Bagi Proses Belajar:** Meningkatkan kolaborasi dan produktivitas belajar kelompok melalui wadah koordinasi yang terpusat.
 
 ---
 
@@ -41,11 +41,11 @@ Projek ini dikembangkan sebagai solusi praktis atas permasalahan koordinasi bela
 
 | No | Fitur | Deskripsi |
 | :--- | :--- | :--- |
-| 1 | **Autentikasi & Profil Pengguna** | Pendaftaran dan masuk menggunakan email serta kata sandi lokal. Profil berisi nama, sekolah/kampus, mata pelajaran favorit, dan area pilihan[cite: 1]. |
-| 2 | **Eksplorasi & Pencarian Sesi Belajar** | Pencarian sesi berdasarkan mata pelajaran dan area/lokasi[cite: 1]. |
-| 3 | **Manajemen Sesi Belajar (*Study Session*)** | Buat, lihat, ubah, dan hapus sesi; hanya pembuat sesi yang dapat mengubah atau menghapusnya. Bergabung ke sesi dengan pencegahan peserta ganda dan pemeriksaan kapasitas[cite: 1]. |
-| 4 | **Sistem Ruang Obrolan Sederhana** | Obrolan teks anggota sesi dengan pembaruan otomatis (menggunakan *HTTP Polling* setiap 5 detik)[cite: 1]. |
-| 5 | **Dashboard / Jadwal Saya** | Dasbor jadwal khusus yang menampilkan daftar sesi belajar yang telah dibuat atau diikuti beserta status jadwalnya[cite: 1]. |
+| 1 | **Autentikasi & Profil Pengguna** | Pendaftaran dan masuk menggunakan email serta kata sandi lokal. Profil berisi nama, sekolah/kampus, mata pelajaran favorit, dan area pilihan. |
+| 2 | **Eksplorasi & Pencarian Sesi Belajar** | Pencarian sesi berdasarkan mata pelajaran dan area/lokasi. |
+| 3 | **Manajemen Sesi Belajar (*Study Session*)** | Buat, lihat, ubah, dan hapus sesi; hanya pembuat sesi yang dapat mengubah atau menghapusnya. Bergabung ke sesi dengan pencegahan peserta ganda dan pemeriksaan kapasitas. |
+| 4 | **Sistem Ruang Obrolan Sederhana** | Obrolan teks anggota sesi dengan pembaruan otomatis (menggunakan *HTTP Polling* setiap 5 detik). |
+| 5 | **Dashboard / Jadwal Saya** | Dasbor jadwal khusus yang menampilkan daftar sesi belajar yang telah dibuat atau diikuti beserta status jadwalnya. |
 
 ---
 
@@ -53,11 +53,11 @@ Projek ini dikembangkan sebagai solusi praktis atas permasalahan koordinasi bela
 
 Untuk memastikan proyek selesai tepat waktu dalam **12 kali pertemuan**, fitur-fitur berikut dikecualikan:
 
-1. **Peta Integrasi Real-Time / Google Maps API:** Tidak menggunakan penentuan titik lokasi via GPS interaktif/Live Maps (lokasi berupa input teks biasa, misal: *"Perpustakaan Kampus A"*)[cite: 1].
-2. **Panggilan Video / Audio Call:** Tidak menyediakan platform *video conference* bawaan (koordinasi penuh via teks atau tautan Zoom/Meet eksternal)[cite: 1].
-3. **Sistem Rating / Ulasan Kompleks:** Belum ada penilaian sistem *reputation score* atau ulasan antar-pengguna[cite: 1].
-4. **Notifikasi Push (*Push Notifications*):** Tidak ada pengiriman notifikasi ke perangkat pengguna secara *real-time*[cite: 1].
-5. **Autentikasi Media Sosial / OAuth:** Login terbatas menggunakan akun lokal (Email & Password), tidak menggunakan Google/Facebook Sign-In[cite: 1].
+1. **Peta Integrasi Real-Time / Google Maps API:** Tidak menggunakan penentuan titik lokasi via GPS interaktif/Live Maps (lokasi berupa input teks biasa, misal: *"Perpustakaan Kampus A"*).
+2. **Panggilan Video / Audio Call:** Tidak menyediakan platform *video conference* bawaan (koordinasi penuh via teks atau tautan Zoom/Meet eksternal).
+3. **Sistem Rating / Ulasan Kompleks:** Belum ada penilaian sistem *reputation score* atau ulasan antar-pengguna.
+4. **Notifikasi Push (*Push Notifications*):** Tidak ada pengiriman notifikasi ke perangkat pengguna secara *real-time*.
+5. **Autentikasi Media Sosial / OAuth:** Login terbatas menggunakan akun lokal (Email & Password), tidak menggunakan Google/Facebook Sign-In.
 
 ---
 
@@ -66,14 +66,14 @@ Untuk memastikan proyek selesai tepat waktu dalam **12 kali pertemuan**, fitur-f
 Aplikasi **StudyBuddy** dinyatakan sukses dikembangkan jika memenuhi kriteria berikut:
 
 ### 1. Fungsionalitas Utama (*Core Flow*) Berjalan Smooth
-- [ ] Pengguna dapat mendaftar akun dan mengatur profil pelajaran favorit & lokasi[cite: 1].
-- [ ] Pengguna dapat membuat sesi belajar baru dan menentukan kapasitas peserta[cite: 1].
-- [ ] Pengguna lain dapat menemukan sesi tersebut melalui pencarian/filter dan menekan tombol *Join*[cite: 1].
-- [ ] Peserta yang terdaftar dalam sesi dapat saling mengirim dan membaca pesan teks di *group chat* sesi[cite: 1].
+- [ ] Pengguna dapat mendaftar akun dan mengatur profil pelajaran favorit & lokasi.
+- [ ] Pengguna dapat membuat sesi belajar baru dan menentukan kapasitas peserta.
+- [ ] Pengguna lain dapat menemukan sesi tersebut melalui pencarian/filter dan menekan tombol *Join*.
+- [ ] Peserta yang terdaftar dalam sesi dapat saling mengirim dan membaca pesan teks di *group chat* sesi.
 
 ### 2. Keberhasilan Teknis
 - [ ] Semua operasi **CRUD** (*Create, Read, Update, Delete*) pada data Sesi Belajar dan Profil berjalan tanpa galat.
-- [ ] Pengujian dasar (*Black Box Testing*) mencatat tidak adanya *critical bug* pada alur utama pendaftaran hingga bergabung sesi[cite: 1].
+- [ ] Pengujian dasar (*Black Box Testing*) mencatat tidak adanya *critical bug* pada alur utama pendaftaran hingga bergabung sesi.
 
 ### 3. Pengujian Antarmuka (*UI/UX*)
 - [ ] Antarmuka aplikasi dapat diakses secara responsif baik melalui *desktop* maupun perangkat *mobile*.
