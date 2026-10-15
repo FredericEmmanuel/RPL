@@ -12,8 +12,25 @@ const allowedOrigins = new Set(
   (process.env.WEB_ORIGIN ?? "http://localhost:5173").split(",").map((origin) => origin.trim())
 );
 allowedOrigins.add("http://127.0.0.1:5173");
+allowedOrigins.add("http://localhost:5174");
+allowedOrigins.add("http://127.0.0.1:5174");
 
-app.use(cors({ origin: [...allowedOrigins] }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      const isLocalhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      if (isLocalhostOrigin) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    }
+  })
+);
 app.use(express.json({ limit: "1mb" }));
 app.get("/api/health", (_request, response) => response.json({ data: { status: "ok" } }));
 app.use("/api", apiRouter);

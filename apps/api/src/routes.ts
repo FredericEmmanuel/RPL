@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { CapacityStatus, type ChatMessage, type StudySession } from "@studybuddy/shared";
 import { createToken, mapUser, requireAuth, type AuthenticatedRequest } from "./auth";
@@ -304,7 +305,7 @@ apiRouter.post("/sessions/:Id/join", async (request: AuthenticatedRequest, respo
     const sessionId = request.params.Id;
     const userId = getUserId(request);
     const joined = await prisma.$transaction(
-      async (transaction) => {
+      async (transaction: Prisma.TransactionClient) => {
         const session = await transaction.studySession.findUnique({
           where: { id: sessionId },
           include: { _count: { select: { participants: true } } }
@@ -360,7 +361,7 @@ apiRouter.get("/sessions/:Id/messages", async (request: AuthenticatedRequest, re
       orderBy: { sentAt: "asc" },
       take: 200
     });
-    const data: ChatMessage[] = messages.map((message) => ({
+    const data: ChatMessage[] = messages.map((message: (typeof messages)[number]) => ({
       id: message.id,
       sessionId: message.sessionId,
       senderId: message.senderId,
