@@ -9,6 +9,7 @@
   "scripts": {
     "build:shared": "npm run build --workspace @studybuddy/shared",
     "build": "npm run build --workspace @studybuddy/api && npm run build --workspace @studybuddy/web",
+    "test": "npm run test --workspace @studybuddy/api",
     "dev": "concurrently -k \"npm run dev --workspace @studybuddy/api\" \"npm run dev --workspace @studybuddy/web\"",
     "db:migrate": "npm run prisma:migrate --workspace @studybuddy/api",
     "db:seed": "npm run prisma:seed --workspace @studybuddy/api",
