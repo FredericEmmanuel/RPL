@@ -194,12 +194,14 @@ oleh CORS.
 
 ```bash
 npm run build
+npm test
 npm run db:studio
 docker compose down
 ```
 
 
-Build root mengompilasi paket shared, API, lalu frontend. `docker compose down` menghentikan
+Build root mengompilasi paket shared, API, lalu frontend. `npm test` menjalankan tes unit service
+API dengan mock Prisma tanpa membutuhkan koneksi database. `docker compose down` menghentikan
 database; volume `studybuddy-postgres` tetap menyimpan data. Untuk menghapus data development
 sepenuhnya, hapus volume tersebut secara eksplisit dengan `docker compose down -v`.
 
@@ -251,5 +253,4 @@ studybuddy/
             ├── models/         # Definisi tipe domain
             ├── enums/          # Status Enum 
             └── dto/            # Data Transfer Objects untuk API
-
 

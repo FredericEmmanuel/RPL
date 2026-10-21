@@ -1,25 +1,17 @@
 import { Router } from "express";
-import bcrypt from "bcryptjs";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { CapacityStatus, type ChatMessage, type StudySession } from "@studybuddy/shared";
 import { createToken, mapUser, requireAuth, type AuthenticatedRequest } from "./auth";
 import { prisma } from "./db";
+import { createAuthService } from "./services/auth.service";
+import { createChatService } from "./services/chat.service";
+import { createExploreService } from "./services/explore.service";
+import { createParticipantService } from "./services/participant.service";
+import { createSessionService } from "./services/session.service";
+import { ServiceError } from "./services/errors";
 
 export const apiRouter = Router();
 
-const registerSchema = z.object({
-  name: z.string().trim().min(2, "Nama minimal 2 karakter."),
-  email: z.string().trim().email("Format email tidak valid.").transform((value) => value.toLowerCase()),
-  password: z.string().min(8, "Kata sandi minimal 8 karakter."),
-  schoolOrUniversity: z.string().trim().max(120).optional(),
-  favoriteSubjects: z.array(z.string().trim().min(1)).max(20).optional(),
-  preferredLocation: z.string().trim().max(120).optional()
-});
-const loginSchema = z.object({
-  email: z.string().trim().email().transform((value) => value.toLowerCase()),
-  password: z.string().min(1)
-});
 const profileSchema = z.object({
   schoolOrUniversity: z.string().trim().min(1, "Nama sekolah atau kampus wajib diisi.").max(120),
   favoriteSubjects: z.array(z.string().trim().min(1)).max(20),
@@ -32,12 +24,6 @@ const sessionSchema = z.object({
   location: z.string().trim().min(2).max(160),
   capacity: z.number().int().min(2).max(100)
 });
-const messageSchema = z.object({ message: z.string().trim().min(1).max(2000) });
-
-function sendValidationError(response: import("express").Response, error: z.ZodError): void {
-  response.status(400).json({ error: error.issues[0]?.message ?? "Data yang dimasukkan tidak valid." });
-}
-
 function sessionInclude() {
   return {
     creator: { select: { id: true, name: true } },
@@ -98,48 +84,57 @@ function getUserId(request: AuthenticatedRequest): string {
   return request.userId;
 }
 
-apiRouter.post("/auth/register", async (request, response, next) => {
-  const parsed = registerSchema.safeParse(request.body);
-  if (!parsed.success) {
-    sendValidationError(response, parsed.error);
+const authService = createAuthService(prisma, { createToken });
+const sessionService = createSessionService((data) =>
+  prisma.studySession.create({ data, include: sessionInclude() })
+);
+const exploreService = createExploreService((where) =>
+  prisma.studySession.findMany({ where, include: sessionInclude(), orderBy: { startTime: "asc" } })
+);
+const participantService = createParticipantService(prisma);
+const chatService = createChatService(
+  (sessionId, userId) =>
+    prisma.sessionParticipant.findUnique({
+      where: { sessionId_userId: { sessionId, userId } }
+    }),
+  (data) =>
+    prisma.chatMessage.create({
+      data,
+      include: { sender: { select: { id: true, name: true } } }
+    })
+);
+
+function sendValidationError(response: import("express").Response, error: z.ZodError): void {
+  response.status(400).json({ error: error.issues[0]?.message ?? "Data yang dimasukkan tidak valid." });
+}
+
+function handleServiceError(
+  error: unknown,
+  response: import("express").Response,
+  next: import("express").NextFunction
+): void {
+  if (error instanceof ServiceError) {
+    response.status(error.statusCode).json({ error: error.message });
     return;
   }
+  next(error);
+}
+
+apiRouter.post("/auth/register", async (request, response, next) => {
   try {
-    const existingUser = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-    if (existingUser) {
-      response.status(409).json({ error: "Email tersebut sudah terdaftar." });
-      return;
-    }
-    const { password, ...profile } = parsed.data;
-    const user = await prisma.user.create({
-      data: {
-        ...profile,
-        passwordHash: await bcrypt.hash(password, 12),
-        schoolOrUniversity: profile.schoolOrUniversity || null,
-        preferredLocation: profile.preferredLocation || null
-      }
-    });
-    response.status(201).json({ data: { token: createToken(user.id), user: mapUser(user) } });
+    const result = await authService.register(request.body);
+    response.status(201).json({ data: { token: result.token, user: mapUser(result.user) } });
   } catch (error) {
-    next(error);
+    handleServiceError(error, response, next);
   }
 });
 
 apiRouter.post("/auth/login", async (request, response, next) => {
-  const parsed = loginSchema.safeParse(request.body);
-  if (!parsed.success) {
-    sendValidationError(response, parsed.error);
-    return;
-  }
   try {
-    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-    if (!user || !(await bcrypt.compare(parsed.data.password, user.passwordHash))) {
-      response.status(401).json({ error: "Email atau kata sandi tidak sesuai." });
-      return;
-    }
-    response.json({ data: { token: createToken(user.id), user: mapUser(user) } });
+    const result = await authService.login(request.body);
+    response.json({ data: { token: result.token, user: mapUser(result.user) } });
   } catch (error) {
-    next(error);
+    handleServiceError(error, response, next);
   }
 });
 
@@ -177,25 +172,10 @@ apiRouter.put("/users/me", async (request: AuthenticatedRequest, response, next)
 
 apiRouter.get("/sessions", async (request, response, next) => {
   try {
-    const subject = typeof request.query.subject === "string" ? request.query.subject.trim() : "";
-    const location = typeof request.query.location === "string" ? request.query.location.trim() : "";
-    const search = typeof request.query.search === "string" ? request.query.search.trim() : "";
-    const sessions = await prisma.studySession.findMany({
-      where: {
-        ...(subject ? { subject: { equals: subject, mode: "insensitive" as const } } : {}),
-        ...(location ? { location: { contains: location, mode: "insensitive" as const } } : {}),
-        ...(search
-          ? {
-              OR: [
-                { title: { contains: search, mode: "insensitive" as const } },
-                { subject: { contains: search, mode: "insensitive" as const } },
-                { location: { contains: search, mode: "insensitive" as const } }
-              ]
-            }
-          : {})
-      },
-      include: sessionInclude(),
-      orderBy: { startTime: "asc" }
+    const sessions = await exploreService.search({
+      subject: typeof request.query.subject === "string" ? request.query.subject : undefined,
+      location: typeof request.query.location === "string" ? request.query.location : undefined,
+      search: typeof request.query.search === "string" ? request.query.search : undefined
     });
     response.json({ data: sessions.map(mapSession) });
   } catch (error) {
@@ -204,24 +184,11 @@ apiRouter.get("/sessions", async (request, response, next) => {
 });
 
 apiRouter.post("/sessions", async (request: AuthenticatedRequest, response, next) => {
-  const parsed = sessionSchema.safeParse(request.body);
-  if (!parsed.success) {
-    sendValidationError(response, parsed.error);
-    return;
-  }
   try {
-    const session = await prisma.studySession.create({
-      data: {
-        ...parsed.data,
-        startTime: new Date(parsed.data.startTime),
-        creatorId: getUserId(request),
-        participants: { create: { userId: getUserId(request) } }
-      },
-      include: sessionInclude()
-    });
+    const session = await sessionService.create(getUserId(request), request.body);
     response.status(201).json({ data: mapSession(session) });
   } catch (error) {
-    next(error);
+    handleServiceError(error, response, next);
   }
 });
 
@@ -304,33 +271,7 @@ apiRouter.post("/sessions/:Id/join", async (request: AuthenticatedRequest, respo
   try {
     const sessionId = request.params.Id;
     const userId = getUserId(request);
-    const joined = await prisma.$transaction(
-      async (transaction: Prisma.TransactionClient) => {
-        const session = await transaction.studySession.findUnique({
-          where: { id: sessionId },
-          include: { _count: { select: { participants: true } } }
-        });
-        if (!session) {
-          return { error: "Sesi belajar tidak ditemukan.", status: 404 as const };
-        }
-        const existing = await transaction.sessionParticipant.findUnique({
-          where: { sessionId_userId: { sessionId, userId } }
-        });
-        if (existing) {
-          return { error: "Kamu sudah bergabung dalam sesi ini.", status: 409 as const };
-        }
-        if (session._count.participants >= session.capacity) {
-          return { error: "Maaf, kapasitas sesi ini sudah penuh.", status: 409 as const };
-        }
-        await transaction.sessionParticipant.create({ data: { sessionId, userId } });
-        return { status: 200 as const };
-      },
-      { isolationLevel: "Serializable" }
-    );
-    if ("error" in joined) {
-      response.status(joined.status).json({ error: joined.error });
-      return;
-    }
+    await participantService.join(sessionId, userId);
     const session = await prisma.studySession.findUniqueOrThrow({
       where: { id: sessionId },
       include: sessionInclude()
@@ -341,7 +282,7 @@ apiRouter.post("/sessions/:Id/join", async (request: AuthenticatedRequest, respo
       response.status(409).json({ error: "Sesi berubah saat kamu bergabung. Silakan coba lagi." });
       return;
     }
-    next(error);
+    handleServiceError(error, response, next);
   }
 });
 
@@ -376,25 +317,10 @@ apiRouter.get("/sessions/:Id/messages", async (request: AuthenticatedRequest, re
 });
 
 apiRouter.post("/sessions/:Id/messages", async (request: AuthenticatedRequest, response, next) => {
-  const parsed = messageSchema.safeParse(request.body);
-  if (!parsed.success) {
-    sendValidationError(response, parsed.error);
-    return;
-  }
   try {
     const sessionId = request.params.Id;
     const senderId = getUserId(request);
-    const participant = await prisma.sessionParticipant.findUnique({
-      where: { sessionId_userId: { sessionId, userId: senderId } }
-    });
-    if (!participant) {
-      response.status(403).json({ error: "Hanya anggota sesi yang dapat mengirim pesan." });
-      return;
-    }
-    const message = await prisma.chatMessage.create({
-      data: { sessionId, senderId, message: parsed.data.message },
-      include: { sender: { select: { id: true, name: true } } }
-    });
+    const message = await chatService.send(sessionId, senderId, request.body?.message);
     response.status(201).json({
       data: {
         id: message.id,
@@ -406,6 +332,6 @@ apiRouter.post("/sessions/:Id/messages", async (request: AuthenticatedRequest, r
       } satisfies ChatMessage
     });
   } catch (error) {
-    next(error);
+    handleServiceError(error, response, next);
   }
 });
