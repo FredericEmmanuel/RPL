@@ -61,7 +61,7 @@ Akun dan kata sandi ini hanya untuk demonstrasi lokal. Jangan gunakan di lingkun
 
 ## Demo
 
-[https://app.guidde.com/share/playbooks/tq8ViCL8ig4UAtNe85LWhU?origin=dJXHPxrU93f86BQ6OlrDEBBsB8N2&mode=videoAndDoc](#)
+[Link Demo](https://app.guidde.com/share/playbooks/tq8ViCL8ig4UAtNe85LWhU?origin=dJXHPxrU93f86BQ6OlrDEBBsB8N2&mode=videoAndDoc)
 
 ## Pengujian dan utilitas
 
