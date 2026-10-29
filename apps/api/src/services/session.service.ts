@@ -29,6 +29,12 @@ const sessionSchema = z.object({
   capacity: z.number().int().min(2).max(100)
 });
 
+export function assertFutureStartTime(startTime: string): void {
+  if (new Date(startTime).getTime() <= Date.now()) {
+    throw new ServiceError("Waktu mulai sesi harus berada di masa depan.", 400);
+  }
+}
+
 export type SessionCreator = (data: {
   title: string;
   subject: string;
@@ -46,6 +52,7 @@ export function createSessionService(createSession: SessionCreator) {
       if (!parsed.success) {
         throw new ServiceError(parsed.error.issues[0]?.message ?? "Data sesi tidak valid.", 400);
       }
+      assertFutureStartTime(parsed.data.startTime);
       return createSession({
         ...parsed.data,
         startTime: new Date(parsed.data.startTime),

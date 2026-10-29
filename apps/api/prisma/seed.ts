@@ -51,7 +51,7 @@ async function main(): Promise<void> {
   const sessions = await Promise.all([
     prisma.studySession.upsert({
       where: { id: "seed-session-matematika" },
-      update: {},
+      update: { startTime: new Date(Date.now() + 86_400_000) },
       create: {
         id: "seed-session-matematika",
         creatorId: alya.id,
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
     }),
     prisma.studySession.upsert({
       where: { id: "seed-session-biologi" },
-      update: {},
+      update: { startTime: new Date(Date.now() + 172_800_000) },
       create: {
         id: "seed-session-biologi",
         creatorId: citra.id,

@@ -7,7 +7,7 @@ import { createAuthService } from "./services/auth.service";
 import { createChatService } from "./services/chat.service";
 import { createExploreService } from "./services/explore.service";
 import { createParticipantService } from "./services/participant.service";
-import { createSessionService } from "./services/session.service";
+import { assertFutureStartTime, createSessionService } from "./services/session.service";
 import { ServiceError } from "./services/errors";
 
 export const apiRouter = Router();
@@ -183,6 +183,19 @@ apiRouter.get("/sessions", async (request, response, next) => {
   }
 });
 
+apiRouter.get("/sessions/mine", async (request: AuthenticatedRequest, response, next) => {
+  try {
+    const sessions = await prisma.studySession.findMany({
+      where: { participants: { some: { userId: getUserId(request) } } },
+      include: sessionInclude(),
+      orderBy: { startTime: "asc" }
+    });
+    response.json({ data: sessions.map(mapSession) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 apiRouter.post("/sessions", async (request: AuthenticatedRequest, response, next) => {
   try {
     const session = await sessionService.create(getUserId(request), request.body);
@@ -219,6 +232,9 @@ apiRouter.put("/sessions/:Id", async (request: AuthenticatedRequest, response, n
     return;
   }
   try {
+    if (parsed.data.startTime) {
+      assertFutureStartTime(parsed.data.startTime);
+    }
     const current = await prisma.studySession.findUnique({
       where: { id: request.params.Id },
       include: { _count: { select: { participants: true } } }

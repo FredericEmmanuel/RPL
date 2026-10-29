@@ -220,6 +220,7 @@ memakai `{ "error": "..." }`.
 | `POST` | `/auth/login` | Publik |
 | `GET`, `PUT` | `/users/me` | Autentikasi |
 | `GET`, `POST` | `/sessions` | Autentikasi |
+| `GET` | `/sessions/mine` | Autentikasi; sesi yang dibuat atau diikuti pengguna |
 | `GET`, `PUT`, `DELETE` | `/sessions/:Id` | Autentikasi; perubahan hanya oleh pembuat |
 | `POST` | `/sessions/:Id/join` | Autentikasi |
 | `GET`, `POST` | `/sessions/:Id/messages` | Autentikasi dan anggota sesi |
@@ -253,4 +254,3 @@ studybuddy/
             ├── models/         # Definisi tipe domain
             ├── enums/          # Status Enum 
             └── dto/            # Data Transfer Objects untuk API
-

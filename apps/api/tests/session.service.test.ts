@@ -50,3 +50,21 @@ test("create rejects missing or invalid required fields", async () => {
     (error: unknown) => error instanceof ServiceError && error.statusCode === 400
   );
 });
+
+test("create rejects a session that starts in the past", async () => {
+  const service = createSessionService(async () => sessionRecord());
+
+  await assert.rejects(
+    service.create("user-1", {
+      title: "Belajar Aljabar",
+      subject: "Matematika",
+      startTime: "2020-01-01T10:00:00.000Z",
+      location: "Perpustakaan",
+      capacity: 4
+    }),
+    (error: unknown) =>
+      error instanceof ServiceError &&
+      error.statusCode === 400 &&
+      error.message === "Waktu mulai sesi harus berada di masa depan."
+  );
+});

@@ -41,6 +41,12 @@ const dateLabel = (value: string, includeTime = true) =>
     minute: includeTime ? "2-digit" : undefined
   }).format(new Date(value));
 
+const toLocalDateTimeInput = (value: string | number | Date) => {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
+
 function App() {
   const { user, loading } = useAuth();
   if (loading) {
@@ -268,10 +274,8 @@ function DashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    apiRequest<StudySession[]>("/sessions")
-      .then((items) => setSessions(
-        items.filter((session) => session.participants.some((participant) => participant.userId === user?.id))
-      ))
+    apiRequest<StudySession[]>("/sessions/mine")
+      .then(setSessions)
       .catch((cause) => setError(cause instanceof Error ? cause.message : "Jadwal tidak dapat dimuat."))
       .finally(() => setLoading(false));
   }, [user?.id]);
@@ -486,7 +490,7 @@ function CreateSessionPage() {
                 {SUBJECTS.map((subject) => <option key={subject}>{subject}</option>)}
               </select>
             </div>
-            <Field label="Waktu mulai" name="startTime" type="datetime-local" required min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)} />
+            <Field label="Waktu mulai" name="startTime" type="datetime-local" required min={toLocalDateTimeInput(Date.now() + 60_000)} />
           </div>
           <Field label="Tempat belajar" name="location" placeholder="Contoh: Perpustakaan UI, Depok" required minLength={2} />
           <div>
@@ -509,10 +513,14 @@ function SessionDetailPage() {
   const { user } = useAuth();
   const [session, setSession] = useState<StudySession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
+  const [chatError, setChatError] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [editing, setEditing] = useState(false);
   const navigate = useNavigate();
   const isMember = session?.participants.some((participant) => participant.userId === user?.id) ?? false;
 
@@ -523,21 +531,47 @@ function SessionDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    setMessages([]);
+    setMessagesLoading(isMember);
+    setChatError("");
     if (!isMember) return;
-    const loadMessages = () => apiRequest<ChatMessage[]>(`/sessions/${id}/messages`)
-      .then(setMessages)
-      .catch((cause) => setError(cause instanceof Error ? cause.message : "Obrolan tidak dapat dimuat."));
+    let active = true;
+    let pending = false;
+    const loadMessages = async () => {
+      if (pending) return;
+      pending = true;
+      try {
+        const result = await apiRequest<ChatMessage[]>(`/sessions/${id}/messages`);
+        if (active) {
+          setMessages(result);
+          setChatError("");
+        }
+      } catch (cause) {
+        if (active) {
+          setChatError(cause instanceof Error ? cause.message : "Obrolan tidak dapat dimuat.");
+        }
+      } finally {
+        pending = false;
+        if (active) setMessagesLoading(false);
+      }
+    };
     void loadMessages();
     const timer = window.setInterval(() => void loadMessages(), 5000);
-    return () => window.clearInterval(timer);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, [id, isMember]);
 
   async function join() {
+    setJoining(true);
     try {
       setSession(await apiRequest<StudySession>(`/sessions/${id}/join`, { method: "POST" }));
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Tidak dapat bergabung ke sesi.");
+    } finally {
+      setJoining(false);
     }
   }
 
@@ -571,14 +605,20 @@ function SessionDetailPage() {
 
   async function saveEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setEditing(true);
+    setError("");
     const form = new FormData(event.currentTarget);
     try {
+      const startTime = new Date(String(form.get("startTime")));
+      if (Number.isNaN(startTime.getTime())) {
+        throw new Error("Waktu mulai tidak valid.");
+      }
       const updated = await apiRequest<StudySession>(`/sessions/${id}`, {
         method: "PUT",
         body: JSON.stringify({
           title: String(form.get("title")),
           subject: String(form.get("subject")),
-          startTime: new Date(String(form.get("startTime"))).toISOString(),
+          startTime: startTime.toISOString(),
           location: String(form.get("location")),
           capacity: Number(form.get("capacity"))
         })
@@ -588,6 +628,8 @@ function SessionDetailPage() {
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Perubahan tidak dapat disimpan.");
+    } finally {
+      setEditing(false);
     }
   }
 
@@ -618,10 +660,10 @@ function SessionDetailPage() {
             {!isMember && (
               <button
                 onClick={join}
-                disabled={session.capacityStatus === CapacityStatus.Full}
+                disabled={joining || session.capacityStatus === CapacityStatus.Full}
                 className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-ink hover:bg-leaf disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {session.capacityStatus === CapacityStatus.Full ? "Sesi sudah penuh" : "Gabung ke sesi"}
+                {joining ? "Bergabung…" : session.capacityStatus === CapacityStatus.Full ? "Sesi sudah penuh" : "Gabung ke sesi"}
                 {session.capacityStatus !== CapacityStatus.Full && <ArrowRight size={16} />}
               </button>
             )}
@@ -647,11 +689,11 @@ function SessionDetailPage() {
                     {SUBJECTS.map((subject) => <option key={subject}>{subject}</option>)}
                   </select>
                 </div>
-                <Field label="Waktu mulai" name="startTime" type="datetime-local" defaultValue={new Date(session.startTime).toISOString().slice(0, 16)} required />
+                <Field label="Waktu mulai" name="startTime" type="datetime-local" min={toLocalDateTimeInput(Date.now() + 60_000)} defaultValue={toLocalDateTimeInput(session.startTime)} required />
               </div>
               <Field label="Lokasi" name="location" defaultValue={session.location} required />
               <Field label="Kapasitas" name="capacity" type="number" min="2" max="100" defaultValue={session.capacity} required />
-              <button className="button-primary">Simpan perubahan <Check size={16} /></button>
+              <button className="button-primary" disabled={editing}>{editing ? "Menyimpan…" : "Simpan perubahan"} <Check size={16} /></button>
             </form>
           )}
           <section className="rounded-3xl border border-ink/10 bg-white p-6 sm:p-7">
@@ -684,7 +726,7 @@ function SessionDetailPage() {
           {isMember ? (
             <>
               <div className="flex-1 space-y-4 overflow-y-auto bg-[#f8f9f6] px-4 py-5 sm:px-6">
-                {messages.length ? messages.map((chat) => (
+                {messagesLoading ? <Loading /> : chatError ? <Alert>{chatError}</Alert> : messages.length ? messages.map((chat) => (
                   <ChatBubble key={chat.id} chat={chat} own={chat.senderId === user?.id} />
                 )) : (
                   <div className="grid h-full place-items-center text-center text-sm text-ink/45">
