@@ -5,4 +5,5 @@ dist
 apps/web/.env.local
 apps/api/src/generated
 coverage
+logs/*.log
 .DS_Store

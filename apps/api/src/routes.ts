@@ -9,8 +9,11 @@ import { createExploreService } from "./services/explore.service";
 import { createParticipantService } from "./services/participant.service";
 import { assertFutureStartTime, createSessionService } from "./services/session.service";
 import { ServiceError } from "./services/errors";
+import { writeLog } from "./logger";
+import { createRateLimiter } from "./rate-limit";
 
 export const apiRouter = Router();
+const authRateLimit = createRateLimiter({ limit: 10, windowMs: 15 * 60 * 1000 });
 
 const profileSchema = z.object({
   schoolOrUniversity: z.string().trim().min(1, "Nama sekolah atau kampus wajib diisi.").max(120),
@@ -120,20 +123,42 @@ function handleServiceError(
   next(error);
 }
 
-apiRouter.post("/auth/register", async (request, response, next) => {
+apiRouter.post("/auth/register", authRateLimit, async (request, response, next) => {
   try {
     const result = await authService.register(request.body);
+    void writeLog({
+      level: "info",
+      event: "auth.register.succeeded",
+      statusCode: 201
+    }).catch(() => console.error("Gagal menyimpan log diagnostik."));
     response.status(201).json({ data: { token: result.token, user: mapUser(result.user) } });
   } catch (error) {
+    void writeLog({
+      level: error instanceof ServiceError && error.statusCode < 500 ? "warn" : "error",
+      event: "auth.register.failed",
+      statusCode: error instanceof ServiceError ? error.statusCode : 500,
+      errorType: error instanceof Error ? error.name : "UnknownError"
+    }).catch(() => console.error("Gagal menyimpan log diagnostik."));
     handleServiceError(error, response, next);
   }
 });
 
-apiRouter.post("/auth/login", async (request, response, next) => {
+apiRouter.post("/auth/login", authRateLimit, async (request, response, next) => {
   try {
     const result = await authService.login(request.body);
+    void writeLog({
+      level: "info",
+      event: "auth.login.succeeded",
+      statusCode: 200
+    }).catch(() => console.error("Gagal menyimpan log diagnostik."));
     response.json({ data: { token: result.token, user: mapUser(result.user) } });
   } catch (error) {
+    void writeLog({
+      level: error instanceof ServiceError && error.statusCode < 500 ? "warn" : "error",
+      event: "auth.login.failed",
+      statusCode: error instanceof ServiceError ? error.statusCode : 500,
+      errorType: error instanceof Error ? error.name : "UnknownError"
+    }).catch(() => console.error("Gagal menyimpan log diagnostik."));
     handleServiceError(error, response, next);
   }
 });
@@ -199,6 +224,11 @@ apiRouter.get("/sessions/mine", async (request: AuthenticatedRequest, response, 
 apiRouter.post("/sessions", async (request: AuthenticatedRequest, response, next) => {
   try {
     const session = await sessionService.create(getUserId(request), request.body);
+    void writeLog({
+      level: "info",
+      event: "session.created",
+      statusCode: 201
+    }).catch(() => console.error("Gagal menyimpan log diagnostik."));
     response.status(201).json({ data: mapSession(session) });
   } catch (error) {
     handleServiceError(error, response, next);
@@ -235,33 +265,39 @@ apiRouter.put("/sessions/:Id", async (request: AuthenticatedRequest, response, n
     if (parsed.data.startTime) {
       assertFutureStartTime(parsed.data.startTime);
     }
-    const current = await prisma.studySession.findUnique({
-      where: { id: request.params.Id },
-      include: { _count: { select: { participants: true } } }
-    });
-    if (!current) {
-      response.status(404).json({ error: "Sesi belajar tidak ditemukan." });
-      return;
-    }
-    if (current.creatorId !== getUserId(request)) {
-      response.status(403).json({ error: "Hanya pembuat sesi yang dapat mengubahnya." });
-      return;
-    }
-    if (parsed.data.capacity !== undefined && parsed.data.capacity < current._count.participants) {
-      response.status(400).json({ error: "Kapasitas tidak boleh kurang dari jumlah peserta saat ini." });
-      return;
-    }
-    const session = await prisma.studySession.update({
-      where: { id: request.params.Id },
-      data: {
-        ...parsed.data,
-        ...(parsed.data.startTime ? { startTime: new Date(parsed.data.startTime) } : {})
+    const session = await prisma.$transaction(
+      async (transaction) => {
+        const current = await transaction.studySession.findUnique({
+          where: { id: request.params.Id },
+          include: { _count: { select: { participants: true } } }
+        });
+        if (!current) {
+          throw new ServiceError("Sesi belajar tidak ditemukan.", 404);
+        }
+        if (current.creatorId !== getUserId(request)) {
+          throw new ServiceError("Hanya pembuat sesi yang dapat mengubahnya.", 403);
+        }
+        if (parsed.data.capacity !== undefined && parsed.data.capacity < current._count.participants) {
+          throw new ServiceError("Kapasitas tidak boleh kurang dari jumlah peserta saat ini.", 400);
+        }
+        return transaction.studySession.update({
+          where: { id: request.params.Id },
+          data: {
+            ...parsed.data,
+            ...(parsed.data.startTime ? { startTime: new Date(parsed.data.startTime) } : {})
+          },
+          include: sessionInclude()
+        });
       },
-      include: sessionInclude()
-    });
+      { isolationLevel: "Serializable" }
+    );
     response.json({ data: mapSession(session) });
   } catch (error) {
-    next(error);
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2034") {
+      response.status(409).json({ error: "Sesi berubah saat kamu mengubahnya. Silakan coba lagi." });
+      return;
+    }
+    handleServiceError(error, response, next);
   }
 });
 

@@ -3,6 +3,8 @@ import test from "node:test";
 import { createSessionService, type SessionRecord } from "../src/services/session.service";
 import { ServiceError } from "../src/services/errors";
 
+const futureStartTime = new Date(Date.now() + 86_400_000).toISOString();
+
 function sessionRecord(): SessionRecord {
   return {
     id: "session-1",
@@ -29,7 +31,7 @@ test("create stores required session fields and includes its creator as a partic
   await service.create("user-1", {
     title: "  Belajar Aljabar ",
     subject: " Matematika ",
-    startTime: "2026-11-01T10:00:00.000Z",
+    startTime: futureStartTime,
     location: "Perpustakaan",
     capacity: 4
   });
