@@ -12,6 +12,7 @@
     "test": "npm run test --workspace @studybuddy/api",
     "dev": "concurrently -k \"npm run dev --workspace @studybuddy/api\" \"npm run dev --workspace @studybuddy/web\"",
     "db:migrate": "npm run prisma:migrate --workspace @studybuddy/api",
+    "db:deploy": "npm run prisma:deploy --workspace @studybuddy/api",
     "db:seed": "npm run prisma:seed --workspace @studybuddy/api",
     "db:studio": "npm run prisma:studio --workspace @studybuddy/api"
   },

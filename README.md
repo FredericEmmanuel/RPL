@@ -102,34 +102,39 @@ docker-compose.yml
 
 API memetakan entitas Prisma ke model dari `@studybuddy/shared`; frontend tidak bergantung pada
 Prisma. Kata sandi disimpan sebagai hash bcrypt. Endpoint selain pendaftaran dan masuk memerlukan
-token bearer. Hanya anggota sesi yang bisa membaca atau mengirim pesan. Data profil publik dan
-detail sesi dapat dilihat setelah masuk.
+token bearer. Hanya anggota sesi yang bisa membaca atau mengirim pesan. Profil pengguna sendiri
+dan detail sesi dapat dilihat setelah masuk.
 
 
 ## Persyaratan
 
 
-- Node.js 20 atau lebih baru dan npm.
-- Docker dengan plugin Docker Compose, atau PostgreSQL 14 atau lebih baru.
+- Node.js v20 atau lebih baru dan npm.
+- Docker Engine/Desktop dengan plugin Docker Compose (`docker compose`).
+- Untuk deployment, sediakan PostgreSQL yang dapat dijangkau API; Docker Compose di bawah
+  menyediakan PostgreSQL 16 untuk pengembangan lokal.
 
 
-## Menyiapkan Database dan Environment
+## Fresh Clone dan Setup Environment
 
 
-Salin `.env.example` menjadi `.env` di root proyek. Sesuaikan `JWT_SECRET` dengan nilai acak
-yang panjang sebelum menjalankan aplikasi. Nilai URL database contoh cocok dengan konfigurasi
-Docker Compose.
-
-
-Jalankan PostgreSQL:
+Clone repository dan salin template environment di root monorepo:
 
 
 ```bash
-docker compose up -d database
+git clone https://github.com/FredericEmmanuel/RPL.git studybuddy
+cd studybuddy
+cp .env.example .env
 ```
 
 
-Instal dependensi dari root:
+Edit `.env` sebelum menjalankan aplikasi. `DATABASE_URL` pada template cocok dengan PostgreSQL
+di Docker Compose. Ganti `JWT_SECRET` dengan rahasia acak yang panjang (contoh:
+`openssl rand -base64 48`). Kredensial database bawaan hanya untuk pengembangan lokal; jangan pakai di server
+publik. `WEB_ORIGIN` harus berisi origin frontend yang diizinkan, tanpa path.
+
+
+## Instalasi Dependensi
 
 
 ```bash
@@ -137,15 +142,25 @@ npm install
 ```
 
 
-Jalankan migrasi, buat Prisma Client, dan masukkan data contoh:
+Semua perintah npm selanjutnya dijalankan dari direktori root `studybuddy`.
+
+
+## Setup Database dan Migrasi Prisma
+
+
+Jalankan database lokal, aplikasikan migrasi, lalu buat akun dan data demo:
 
 
 ```bash
+docker compose up -d database
 npm run db:migrate
 npm run db:seed
 ```
 
 
+`db:migrate` menjalankan migrasi development Prisma dan menghasilkan Prisma Client. Untuk
+deployment production, setelah variabel environment production tersedia, jalankan
+`npm run db:deploy` agar hanya migrasi yang telah dibuat diterapkan. Seed hanya untuk demo lokal.
 Seed menyediakan tiga akun, dua sesi terbuka, peserta, dan pesan obrolan. Akun demo:
 
 
@@ -156,13 +171,22 @@ Seed menyediakan tiga akun, dua sesi terbuka, peserta, dan pesan obrolan. Akun d
 | `citra@studybuddy.id` | `belajar123` |
 
 
-Data seed hanya untuk pengembangan lokal. Jangan gunakan kredensial contoh di lingkungan publik.
+Data seed dan kredensial contoh hanya untuk pengembangan lokal. Jangan gunakan di lingkungan
+publik.
 
 
-## Menjalankan Aplikasi
+## Build, Menjalankan, dan Deploy
 
 
-Untuk menjalankan frontend dan API bersamaan:
+Build shared package, API, dan frontend:
+
+
+```bash
+npm run build
+```
+
+
+Jalankan frontend dan API bersama-sama untuk development:
 
 
 ```bash
@@ -170,40 +194,58 @@ npm run dev
 ```
 
 
-- Frontend: <http://localhost:5173>
+URL lokal:
+
+
+- Frontend Web: <http://localhost:5173>
 - API: <http://localhost:3001/api>
-- Pemeriksaan API: <http://localhost:3001/api/health>
+- Health check: <http://localhost:3001/api/health>
 
+API membaca `.env` root. Vite memakai `VITE_API_URL` (default
+`http://localhost:3001/api`); nilainya ditanam saat build frontend. Untuk production, atur
+`VITE_API_URL` di environment build frontend.
 
-Atau jalankan masing-masing di terminal terpisah:
-
+Untuk menjalankan hasil build, jalankan API dan preview frontend di terminal terpisah:
 
 ```bash
-npm run dev --workspace @studybuddy/api
-npm run dev --workspace @studybuddy/web
+npm run start --workspace @studybuddy/api
+npm run preview --workspace @studybuddy/web
 ```
 
+`start` menjalankan API production dari `apps/api/dist`; `preview` menyajikan hasil build Vite
+untuk verifikasi/demo, bukan pengganti static hosting production. Deploy `apps/web/dist` ke static
+hosting dan API ke Node.js hosting, atur `VITE_API_URL`, `DATABASE_URL`, `JWT_SECRET`,
+`API_PORT`, serta `WEB_ORIGIN` sesuai domain/hosting, kemudian jalankan migrasi production
+`npm run db:deploy`. Gunakan HTTPS dan PostgreSQL terkelola pada deployment publik. Repository
+ini tidak menyediakan satu perintah root `npm run start` untuk menjalankan kedua server.
 
-API membaca `.env` root saat dijalankan dari monorepo. Vite menggunakan `VITE_API_URL`, dengan
-nilai bawaan `http://localhost:3001/api`. `WEB_ORIGIN` mengatur asal frontend yang diizinkan
-oleh CORS.
-
-
-## Build dan Utilitas
-
+Tes unit service API memakai mock Prisma dan tidak memerlukan database. Perintah utilitas:
 
 ```bash
-npm run build
 npm test
 npm run db:studio
 docker compose down
 ```
 
+`docker compose down` menghentikan database tetapi mempertahankan volume `studybuddy-postgres`.
+`docker compose down -v` menghapus volume dan seluruh data lokal secara permanen.
 
-Build root mengompilasi paket shared, API, lalu frontend. `npm test` menjalankan tes unit service
-API dengan mock Prisma tanpa membutuhkan koneksi database. `docker compose down` menghentikan
-database; volume `studybuddy-postgres` tetap menyimpan data. Untuk menghapus data development
-sepenuhnya, hapus volume tersebut secara eksplisit dengan `docker compose down -v`.
+Log diagnostik API disimpan sebagai JSON Lines di `logs/studybuddy-api.log` (path relatif root
+repository). Folder `logs/` dibuat otomatis ketika API dijalankan; file log diabaikan Git dan
+tidak masuk commit. Untuk memantau log:
+
+```bash
+tail -f logs/studybuddy-api.log
+```
+
+Log mencatat waktu, level, event, method/status request, dan tipe error; token JWT, password,
+hash password, header, serta isi body tidak dicatat. Event login/registrasi berhasil/gagal dan
+pembuatan sesi dicatat tanpa menyimpan kredensial atau isi sesi.
+
+Endpoint registrasi dan login dibatasi hingga 10 permintaan per IP per 15 menit; permintaan
+selanjutnya menerima `429` beserta header `Retry-After`. Pembatas ini memakai memori proses:
+untuk deployment multi-instance atau restart-resilient, gunakan rate-limit store bersama seperti
+Redis dan atur reverse proxy agar IP klien diteruskan dengan konfigurasi tepercaya.
 
 
 ## API REST
@@ -230,7 +272,7 @@ memakai `{ "error": "..." }`.
 huruf besar/kecil; `search` mencocokkan judul, mata pelajaran, atau lokasi. Kapasitas mencakup
 pembuat sesi, kapasitas minimal dua orang, dan satu akun tidak dapat bergabung dua kali.
 Transaksi serializable menjaga kapasitas tetap konsisten saat beberapa permintaan bergabung
-bersamaan.
+bersamaan maupun saat pembuat mengubah kapasitas.
 
 
 ## Struktur Proyek (Monorepo)

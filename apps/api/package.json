@@ -11,6 +11,7 @@
     "start": "dotenv -e ../../.env -- node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev --schema prisma/schema.prisma",
+    "prisma:deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "dotenv -e ../../.env -- prisma studio --schema prisma/schema.prisma"
   },
