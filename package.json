@@ -14,7 +14,8 @@
     "db:migrate": "npm run prisma:migrate --workspace @studybuddy/api",
     "db:deploy": "npm run prisma:deploy --workspace @studybuddy/api",
     "db:seed": "npm run prisma:seed --workspace @studybuddy/api",
-    "db:studio": "npm run prisma:studio --workspace @studybuddy/api"
+    "db:studio": "npm run prisma:studio --workspace @studybuddy/api",
+    "vercel-build": "npm run prisma:generate --workspace @studybuddy/api && npm run build"
   },
   "overrides": {
     "shell-quote": "1.12.0"
