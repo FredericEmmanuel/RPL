@@ -2,6 +2,8 @@ node_modules
 dist
 *.tsbuildinfo
 .env
+.env.local
+.env.*.local
 apps/web/.env.local
 apps/api/src/generated
 coverage
