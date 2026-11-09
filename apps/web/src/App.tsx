@@ -556,7 +556,9 @@ function SessionDetailPage() {
       }
     };
     void loadMessages();
-    const timer = window.setInterval(() => void loadMessages(), 5000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadMessages();
+    }, 10000);
     return () => {
       active = false;
       window.clearInterval(timer);
