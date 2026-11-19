@@ -10,6 +10,7 @@ function makePrisma(input: {
   sessionExists?: boolean;
 }) {
   let created = 0;
+  let deleted = 0;
   const prisma: ParticipantPrisma = {
     $transaction: async (operation) =>
       operation({
@@ -17,18 +18,22 @@ function makePrisma(input: {
           findUnique: async () =>
             input.sessionExists === false
               ? null
-              : { capacity: input.capacity, _count: { participants: input.participantCount } }
+              : { capacity: input.capacity, creatorId: "creator-1", _count: { participants: input.participantCount } }
         },
         sessionParticipant: {
           findUnique: async () => (input.existingParticipant ? { id: "participant-1" } : null),
           create: async () => {
             created += 1;
             return { id: "participant-2" };
+          },
+          delete: async () => {
+            deleted += 1;
+            return { id: "participant-1" };
           }
         }
       })
   };
-  return { prisma, getCreated: () => created };
+  return { prisma, getCreated: () => created, getDeleted: () => deleted };
 }
 
 test("join adds a participant when capacity is available", async () => {
@@ -53,4 +58,16 @@ test("join rejects a full session and duplicate participation", async () => {
     (error: unknown) => error instanceof ServiceError && error.statusCode === 409
   );
   assert.equal(duplicate.getCreated(), 0);
+});
+
+test("leave removes an existing participant", async () => {
+  const { prisma, getDeleted } = makePrisma({
+    participantCount: 2,
+    capacity: 4,
+    existingParticipant: true
+  });
+
+  await createParticipantService(prisma).leave("session-1", "user-2");
+
+  assert.equal(getDeleted(), 1);
 });

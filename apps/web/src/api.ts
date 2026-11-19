@@ -1,4 +1,5 @@
 const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
+export class UnauthorizedError extends Error {}
 
 export async function apiRequest<T>(
   path: string,
@@ -20,6 +21,11 @@ export async function apiRequest<T>(
 
   const result: { data?: T; error?: string } = await response.json();
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem("studybuddy-token");
+      window.dispatchEvent(new Event("studybuddy:unauthorized"));
+      throw new UnauthorizedError(result.error ?? "Sesi masuk kedaluwarsa.");
+    }
     throw new Error(result.error ?? "Permintaan tidak berhasil.");
   }
   if (!("data" in result)) {

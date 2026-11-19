@@ -70,3 +70,18 @@ test("create rejects a session that starts in the past", async () => {
       error.message === "Waktu mulai sesi harus berada di masa depan."
   );
 });
+
+test("create rejects capacity below two participants", async () => {
+  const service = createSessionService(async () => sessionRecord());
+
+  await assert.rejects(
+    service.create("user-1", {
+      title: "Belajar Aljabar",
+      subject: "Matematika",
+      startTime: futureStartTime,
+      location: "Perpustakaan",
+      capacity: 1
+    }),
+    (error: unknown) => error instanceof ServiceError && error.statusCode === 400
+  );
+});

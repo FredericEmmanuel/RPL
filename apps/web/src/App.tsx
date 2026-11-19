@@ -38,7 +38,8 @@ const dateLabel = (value: string, includeTime = true) =>
     day: "numeric",
     month: "long",
     hour: includeTime ? "2-digit" : undefined,
-    minute: includeTime ? "2-digit" : undefined
+    minute: includeTime ? "2-digit" : undefined,
+    timeZone: "Asia/Jakarta"
   }).format(new Date(value));
 
 const toLocalDateTimeInput = (value: string | number | Date) => {
@@ -537,11 +538,14 @@ function SessionDetailPage() {
     if (!isMember) return;
     let active = true;
     let pending = false;
+    const controller = new AbortController();
     const loadMessages = async () => {
       if (pending) return;
       pending = true;
       try {
-        const result = await apiRequest<ChatMessage[]>(`/sessions/${id}/messages`);
+        const result = await apiRequest<ChatMessage[]>(`/sessions/${id}/messages`, {
+          signal: controller.signal
+        });
         if (active) {
           setMessages(result);
           setChatError("");
@@ -561,6 +565,7 @@ function SessionDetailPage() {
     }, 10000);
     return () => {
       active = false;
+      controller.abort();
       window.clearInterval(timer);
     };
   }, [id, isMember]);
@@ -572,6 +577,18 @@ function SessionDetailPage() {
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Tidak dapat bergabung ke sesi.");
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  async function leave() {
+    setJoining(true);
+    try {
+      setSession(await apiRequest<StudySession>(`/sessions/${id}/join`, { method: "DELETE" }));
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Tidak dapat keluar dari sesi.");
     } finally {
       setJoining(false);
     }
@@ -669,6 +686,15 @@ function SessionDetailPage() {
                 {session.capacityStatus !== CapacityStatus.Full && <ArrowRight size={16} />}
               </button>
             )}
+            {isMember && session.creatorId !== user?.id && (
+              <button
+                onClick={leave}
+                disabled={joining}
+                className="mt-4 w-full rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-50"
+              >
+                {joining ? "Keluar…" : "Keluar dari sesi"}
+              </button>
+            )}
             {session.creatorId === user?.id && (
               <div className="mt-6 flex gap-3 border-t border-white/15 pt-5">
                 <button onClick={() => setEditOpen(!editOpen)} className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">
@@ -717,7 +743,7 @@ function SessionDetailPage() {
             </div>
           </section>
         </div>
-        <section className="flex h-[600px] flex-col overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-card">
+        <section className="flex h-[70dvh] max-h-[600px] min-h-[480px] flex-col overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-card">
           <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4 sm:px-6">
             <div>
               <h2 className="flex items-center gap-2 font-semibold"><MessageCircle size={19} /> Obrolan kelompok</h2>
