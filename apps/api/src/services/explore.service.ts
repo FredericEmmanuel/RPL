@@ -10,6 +10,7 @@ export function createExploreService(findSessions: SessionSearch) {
       const location = filters.location?.trim() ?? "";
       const search = filters.search?.trim() ?? "";
       return findSessions({
+        startTime: { gte: new Date() },
         ...(subject ? { subject: { equals: subject, mode: "insensitive" } } : {}),
         ...(location ? { location: { contains: location, mode: "insensitive" } } : {}),
         ...(search

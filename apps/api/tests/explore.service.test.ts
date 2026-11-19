@@ -29,10 +29,17 @@ test("search applies case-insensitive subject and location filters", async () =>
     await service.search({ subject: " Matematika ", location: " UI " }),
     sessions
   );
-  assert.deepEqual(query, {
-    subject: { equals: "Matematika", mode: "insensitive" },
-    location: { contains: "UI", mode: "insensitive" }
-  });
+  assert.deepEqual(
+    {
+      subject: query?.subject,
+      location: query?.location
+    },
+    {
+      subject: { equals: "Matematika", mode: "insensitive" },
+      location: { contains: "UI", mode: "insensitive" }
+    }
+  );
+  assert.ok(query?.startTime && "gte" in query.startTime);
 });
 
 test("search combines free-text search with explicit filters", async () => {

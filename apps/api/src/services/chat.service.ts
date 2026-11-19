@@ -22,6 +22,9 @@ export function createChatService(
       if (message.length < 1 || message.length > 2000) {
         throw new ServiceError("Pesan harus berisi 1–2000 karakter.", 400);
       }
+      if (/<(?:script|iframe|object|embed|style)\b/i.test(message) || /(?:on(?:click|load|error|mouseover)|javascript\s*:)/i.test(message)) {
+        throw new ServiceError("Pesan mengandung konten yang tidak diizinkan.", 400);
+      }
       const participant = await findParticipant(sessionId, senderId);
       if (!participant) {
         throw new ServiceError("Hanya anggota sesi yang dapat mengirim pesan.", 403);

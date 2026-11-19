@@ -51,3 +51,19 @@ test("send rejects non-members and invalid text", async () => {
   );
   assert.equal(creates, 0);
 });
+
+test("send rejects executable HTML and event-handler content", async () => {
+  const service = createChatService(
+    async () => ({ id: "participant-1" }),
+    async (data) => ({ ...savedMessage, ...data })
+  );
+
+  await assert.rejects(
+    service.send("session-1", "user-1", '<img src=x onerror="alert(1)">'),
+    (error: unknown) => error instanceof ServiceError && error.statusCode === 400
+  );
+  await assert.rejects(
+    service.send("session-1", "user-1", '<script>alert("xss")</script>'),
+    (error: unknown) => error instanceof ServiceError && error.statusCode === 400
+  );
+});

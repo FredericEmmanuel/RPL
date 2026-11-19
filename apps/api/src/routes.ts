@@ -328,6 +328,19 @@ apiRouter.post("/sessions/:Id/join", async (request: AuthenticatedRequest, respo
       where: { id: sessionId },
       include: sessionInclude()
     });
+
+    apiRouter.delete("/sessions/:Id/join", async (request: AuthenticatedRequest, response, next) => {
+      try {
+        await participantService.leave(request.params.Id, getUserId(request));
+        const session = await prisma.studySession.findUniqueOrThrow({
+          where: { id: request.params.Id },
+          include: sessionInclude()
+        });
+        response.json({ data: mapSession(session) });
+      } catch (error) {
+        handleServiceError(error, response, next);
+      }
+    });
     response.json({ data: mapSession(session) });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2034") {

@@ -39,6 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+    window.addEventListener("studybuddy:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("studybuddy:unauthorized", handleUnauthorized);
+  }, []);
+
   const acceptAuth = useCallback((result: AuthResponse) => {
     localStorage.setItem("studybuddy-token", result.token);
     setUser(result.user);

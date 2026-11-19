@@ -5,13 +5,14 @@ interface ParticipantTransaction {
     findUnique(args: {
       where: { id: string };
       include: { _count: { select: { participants: true } } };
-    }): Promise<{ capacity: number; _count: { participants: number } } | null>;
+    }): Promise<{ capacity: number; creatorId?: string; _count: { participants: number } } | null>;
   };
   sessionParticipant: {
     findUnique(args: {
       where: { sessionId_userId: { sessionId: string; userId: string } };
     }): Promise<{ id: string } | null>;
     create(args: { data: { sessionId: string; userId: string } }): Promise<unknown>;
+    delete(args: { where: { sessionId_userId: { sessionId: string; userId: string } } }): Promise<unknown>;
   };
 }
 
@@ -54,6 +55,32 @@ export function createParticipantService(prisma: ParticipantPrisma) {
         }
         throw error;
       }
+    },
+    async leave(sessionId: string, userId: string): Promise<void> {
+      await prisma.$transaction(
+        async (transaction) => {
+          const session = await transaction.studySession.findUnique({
+            where: { id: sessionId },
+            include: { _count: { select: { participants: true } } }
+          });
+          if (!session) {
+            throw new ServiceError("Sesi belajar tidak ditemukan.", 404);
+          }
+          if (session.creatorId === userId) {
+            throw new ServiceError("Pembuat sesi tidak dapat keluar dari sesinya.", 409);
+          }
+          const existing = await transaction.sessionParticipant.findUnique({
+            where: { sessionId_userId: { sessionId, userId } }
+          });
+          if (!existing) {
+            throw new ServiceError("Kamu bukan peserta sesi ini.", 404);
+          }
+          await transaction.sessionParticipant.delete({
+            where: { sessionId_userId: { sessionId, userId } }
+          });
+        },
+        { isolationLevel: "Serializable" }
+      );
     }
   };
 }
