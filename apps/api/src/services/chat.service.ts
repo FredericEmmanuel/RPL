@@ -11,9 +11,17 @@ export interface ChatMessageRecord {
 
 export function createChatService(
   findParticipant: (sessionId: string, userId: string) => Promise<{ id: string } | null>,
-  createMessage: (data: { sessionId: string; senderId: string; message: string }) => Promise<ChatMessageRecord>
+  createMessage: (data: { sessionId: string; senderId: string; message: string }) => Promise<ChatMessageRecord>,
+  findMessages: (sessionId: string) => Promise<ChatMessageRecord[]>
 ) {
   return {
+    async list(sessionId: string, userId: string) {
+      const participant = await findParticipant(sessionId, userId);
+      if (!participant) {
+        throw new ServiceError("Hanya anggota sesi yang dapat melihat obrolan.", 403);
+      }
+      return findMessages(sessionId);
+    },
     async send(sessionId: string, senderId: string, input: unknown) {
       if (typeof input !== "string") {
         throw new ServiceError("Pesan harus berisi 1–2000 karakter.", 400);
@@ -22,7 +30,7 @@ export function createChatService(
       if (message.length < 1 || message.length > 2000) {
         throw new ServiceError("Pesan harus berisi 1–2000 karakter.", 400);
       }
-      if (/<(?:script|iframe|object|embed|style)\b/i.test(message) || /(?:on(?:click|load|error|mouseover)|javascript\s*:)/i.test(message)) {
+      if (/<[a-z][^>]*>/i.test(message) || /(?:on[a-z]+\s*=|javascript\s*:)/i.test(message)) {
         throw new ServiceError("Pesan mengandung konten yang tidak diizinkan.", 400);
       }
       const participant = await findParticipant(sessionId, senderId);
