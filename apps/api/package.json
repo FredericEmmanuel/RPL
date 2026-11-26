@@ -8,6 +8,7 @@
     "prebuild": "npm run build --workspace @studybuddy/shared",
     "build": "tsc -p tsconfig.json",
     "test": "tsx --test tests/*.test.ts",
+    "test:failed-gate-demo": "tsx --test tests/ci-failure-demo.ts",
     "start": "dotenv -e ../../.env -- node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev --schema prisma/schema.prisma",

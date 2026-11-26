@@ -227,6 +227,51 @@ npm run db:studio
 docker compose down
 ```
 
+## CI/CD P11
+
+Setelah clone baru, pasang dependency sesuai lockfile lalu jalankan test dan build:
+
+```bash
+npm ci
+npm test
+npm run build
+```
+
+Workflow `.github/workflows/ci-cd-p11.yml` berjalan pada push ke `v1.0_dev` dan pull request
+ke `v1.0_dev` atau `v1.1`.
+Test job berisi tepat 200 unit test; build baru berjalan setelah test lulus. Deploy memakai
+Vercel Preview sebagai staging, bukan production. Tambahkan repository secrets
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, dan `VERCEL_PROJECT_ID`, serta atur environment variables
+database, JWT, dan frontend di Vercel. Tanpa kredensial Vercel, job deploy akan gagal secara
+eksplisit dan aplikasi belum dapat disebut live.
+
+Untuk demonstrasi gerbang gagal yang terisolasi, buka **Actions → StudyBuddy CI/CD P11 →
+Run workflow** dan pilih `simulate_failure`. Seluruh 200 test reguler dijalankan lebih dulu,
+lalu dua test demonstrasi yang memang selalu gagal; job build dan deploy tidak berjalan karena
+bergantung pada job test. Demonstrasi ini tidak mengubah atau merusak kode aplikasi. Untuk
+mencegah merge di GitHub, aktifkan branch protection/ruleset untuk `v1.1` dan wajibkan status
+check `Test (200 unit tests)`, `Build monorepo`, dan `Deploy preview to Vercel`.
+
+Branch pengembangan saat ini `v1.0_dev` (under testing). Repository awal tidak memiliki ref
+`v1.0`, sehingga branch ini dibuat dari `main` atas persetujuan pengguna. Setelah hasil CI
+hijau dan staging sudah diverifikasi, promosikan ke branch rilis:
+
+```bash
+git switch -c v1.1 main
+git merge --no-ff v1.0_dev
+git tag -a v1.1.0 -m "StudyBuddy v1.1"
+git push origin v1.1 v1.1.0
+```
+
+Checklist screenshot bukti P11:
+
+1. `git branch -a` atau `git log --graph --oneline --all` yang menampilkan `v1.0`,
+   `v1.0_dev`, dan `v1.1` (gunakan ref `main` sebagai baseline selama `v1.0` belum tersedia).
+2. Log failed-gate merah, serta job build dan deploy yang dilewati karena test gagal.
+3. Ringkasan test hijau: `ℹ tests 200`, `ℹ pass 200`, `ℹ fail 0`.
+4. Workflow hijau dari test → build → deploy, termasuk URL Preview Vercel yang aktif.
+5. Browser menampilkan StudyBuddy dari URL Preview tersebut dan siap diuji.
+
 `docker compose down` menghentikan database tetapi mempertahankan volume `studybuddy-postgres`.
 `docker compose down -v` menghapus volume dan seluruh data lokal secara permanen.
 

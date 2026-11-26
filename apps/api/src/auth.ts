@@ -6,6 +6,8 @@ export interface AuthenticatedRequest extends Request {
   userId?: string;
 }
 
+class InvalidTokenPayloadError extends Error {}
+
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
@@ -16,6 +18,14 @@ function getJwtSecret(): string {
 
 export function createToken(userId: string): string {
   return jwt.sign({ userId }, getJwtSecret(), { expiresIn: "7d" });
+}
+
+export function verifyToken(token: string): string {
+  const payload = jwt.verify(token, getJwtSecret());
+  if (typeof payload === "string" || typeof payload.userId !== "string") {
+    throw new InvalidTokenPayloadError("Sesi masuk tidak valid.");
+  }
+  return payload.userId;
 }
 
 export function requireAuth(
@@ -30,15 +40,14 @@ export function requireAuth(
   }
 
   try {
-    const payload = jwt.verify(token, getJwtSecret());
-    if (typeof payload === "string" || typeof payload.userId !== "string") {
-      response.status(401).json({ error: "Sesi masuk tidak valid." });
-      return;
-    }
-    request.userId = payload.userId;
+    request.userId = verifyToken(token);
     next();
-  } catch {
-    response.status(401).json({ error: "Sesi masuk kedaluwarsa. Silakan masuk kembali." });
+  } catch (error) {
+    response.status(401).json({
+      error: error instanceof InvalidTokenPayloadError
+        ? "Sesi masuk tidak valid."
+        : "Sesi masuk kedaluwarsa. Silakan masuk kembali."
+    });
   }
 }
 

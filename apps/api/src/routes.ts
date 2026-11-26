@@ -7,7 +7,7 @@ import { createAuthService } from "./services/auth.service";
 import { createChatService } from "./services/chat.service";
 import { createExploreService } from "./services/explore.service";
 import { createParticipantService } from "./services/participant.service";
-import { assertFutureStartTime, createSessionService } from "./services/session.service";
+import { assertFutureStartTime, assertSessionCreator, createSessionService } from "./services/session.service";
 import { ServiceError } from "./services/errors";
 import { writeLog } from "./logger";
 import { createRateLimiter } from "./rate-limit";
@@ -104,7 +104,16 @@ const chatService = createChatService(
     prisma.chatMessage.create({
       data,
       include: { sender: { select: { id: true, name: true } } }
-    })
+    }),
+  async (sessionId) => {
+    const messages = await prisma.chatMessage.findMany({
+      where: { sessionId },
+      include: { sender: { select: { id: true, name: true } } },
+      orderBy: { sentAt: "asc" },
+      take: 200
+    });
+    return messages;
+  }
 );
 
 function sendValidationError(response: import("express").Response, error: z.ZodError): void {
@@ -271,12 +280,7 @@ apiRouter.put("/sessions/:Id", async (request: AuthenticatedRequest, response, n
           where: { id: request.params.Id },
           include: { _count: { select: { participants: true } } }
         });
-        if (!current) {
-          throw new ServiceError("Sesi belajar tidak ditemukan.", 404);
-        }
-        if (current.creatorId !== getUserId(request)) {
-          throw new ServiceError("Hanya pembuat sesi yang dapat mengubahnya.", 403);
-        }
+        assertSessionCreator(current, getUserId(request));
         if (parsed.data.capacity !== undefined && parsed.data.capacity < current._count.participants) {
           throw new ServiceError("Kapasitas tidak boleh kurang dari jumlah peserta saat ini.", 400);
         }
@@ -304,18 +308,11 @@ apiRouter.put("/sessions/:Id", async (request: AuthenticatedRequest, response, n
 apiRouter.delete("/sessions/:Id", async (request: AuthenticatedRequest, response, next) => {
   try {
     const session = await prisma.studySession.findUnique({ where: { id: request.params.Id } });
-    if (!session) {
-      response.status(404).json({ error: "Sesi belajar tidak ditemukan." });
-      return;
-    }
-    if (session.creatorId !== getUserId(request)) {
-      response.status(403).json({ error: "Hanya pembuat sesi yang dapat menghapusnya." });
-      return;
-    }
+    assertSessionCreator(session, getUserId(request));
     await prisma.studySession.delete({ where: { id: session.id } });
     response.status(204).end();
   } catch (error) {
-    next(error);
+    handleServiceError(error, response, next);
   }
 });
 
@@ -329,18 +326,6 @@ apiRouter.post("/sessions/:Id/join", async (request: AuthenticatedRequest, respo
       include: sessionInclude()
     });
 
-    apiRouter.delete("/sessions/:Id/join", async (request: AuthenticatedRequest, response, next) => {
-      try {
-        await participantService.leave(request.params.Id, getUserId(request));
-        const session = await prisma.studySession.findUniqueOrThrow({
-          where: { id: request.params.Id },
-          include: sessionInclude()
-        });
-        response.json({ data: mapSession(session) });
-      } catch (error) {
-        handleServiceError(error, response, next);
-      }
-    });
     response.json({ data: mapSession(session) });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2034") {
@@ -351,22 +336,23 @@ apiRouter.post("/sessions/:Id/join", async (request: AuthenticatedRequest, respo
   }
 });
 
+apiRouter.delete("/sessions/:Id/join", async (request: AuthenticatedRequest, response, next) => {
+  try {
+    await participantService.leave(request.params.Id, getUserId(request));
+    const session = await prisma.studySession.findUniqueOrThrow({
+      where: { id: request.params.Id },
+      include: sessionInclude()
+    });
+    response.json({ data: mapSession(session) });
+  } catch (error) {
+    handleServiceError(error, response, next);
+  }
+});
+
 apiRouter.get("/sessions/:Id/messages", async (request: AuthenticatedRequest, response, next) => {
   try {
     const sessionId = request.params.Id;
-    const participant = await prisma.sessionParticipant.findUnique({
-      where: { sessionId_userId: { sessionId, userId: getUserId(request) } }
-    });
-    if (!participant) {
-      response.status(403).json({ error: "Hanya anggota sesi yang dapat melihat obrolan." });
-      return;
-    }
-    const messages = await prisma.chatMessage.findMany({
-      where: { sessionId },
-      include: { sender: { select: { id: true, name: true } } },
-      orderBy: { sentAt: "asc" },
-      take: 200
-    });
+    const messages = await chatService.list(sessionId, getUserId(request));
     const data: ChatMessage[] = messages.map((message: (typeof messages)[number]) => ({
       id: message.id,
       sessionId: message.sessionId,

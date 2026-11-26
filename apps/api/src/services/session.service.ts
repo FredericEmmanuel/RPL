@@ -35,6 +35,18 @@ export function assertFutureStartTime(startTime: string): void {
   }
 }
 
+export function assertSessionCreator<T extends { creatorId: string }>(
+  session: T | null,
+  userId: string
+): asserts session is T {
+  if (!session) {
+    throw new ServiceError("Sesi belajar tidak ditemukan.", 404);
+  }
+  if (session.creatorId !== userId) {
+    throw new ServiceError("Hanya pembuat sesi yang dapat mengubahnya.", 403);
+  }
+}
+
 export type SessionCreator = (data: {
   title: string;
   subject: string;
